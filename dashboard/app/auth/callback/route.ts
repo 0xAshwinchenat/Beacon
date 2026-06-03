@@ -21,7 +21,17 @@ export async function GET(request: Request) {
       return NextResponse.redirect(`${origin}${next}`);
     } else {
       console.error('Auth Callback Error:', error);
-      return NextResponse.redirect(`${origin}/login?error=${encodeURIComponent(error.message)}`);
+      const { cookies } = await import('next/headers');
+      const allCookies = cookies().getAll();
+      return new NextResponse(
+        JSON.stringify({
+          error: error.message,
+          env_supabase_url: process.env.NEXT_PUBLIC_SUPABASE_URL,
+          cookiesReceivedByServer: allCookies.map(c => c.name),
+          userAgent: request.headers.get('user-agent')
+        }, null, 2),
+        { status: 400, headers: { 'content-type': 'application/json' } }
+      );
     }
   }
 
