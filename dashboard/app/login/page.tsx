@@ -71,7 +71,7 @@ function LoginContent() {
       const { error } = await authClient.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
+          redirectTo: `${window.location.origin}/login`,
         },
       });
 
