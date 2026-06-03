@@ -55,5 +55,5 @@ export async function GET(request: Request) {
   }
 
   // If there's an error, redirect to login page with error param
-  return NextResponse.redirect(`${origin}/login?error=no_code`);
+  return NextResponse.redirect(`${origin}/login?error=no_code&full_url=${encodeURIComponent(request.url)}`);
 }
