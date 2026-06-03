@@ -30,7 +30,7 @@ export async function GET(request: Request) {
         auth: {
           flowType: 'pkce',
           detectSessionInUrl: false,
-          persistSession: false,
+          persistSession: true,
           storage: {
             getItem: (key) => key.endsWith('-code-verifier') ? codeVerifier : null,
             setItem: () => {},
