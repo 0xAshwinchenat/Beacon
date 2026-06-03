@@ -36,9 +36,9 @@ export async function GET(request: Request) {
 
     const tokenData = await tokenResponse.json();
 
-    if (tokenData.error) {
+    if (tokenData.error || tokenData.error_code) {
       console.error('Auth API Error:', tokenData);
-      return NextResponse.redirect(`${origin}/login?error=${encodeURIComponent(tokenData.error_description || tokenData.error)}`);
+      return NextResponse.redirect(`${origin}/login?error=${encodeURIComponent(tokenData.error_description || tokenData.msg || tokenData.error)}`);
     }
 
     if (tokenData.access_token) {
