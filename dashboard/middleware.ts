@@ -68,16 +68,14 @@ export async function middleware(request: NextRequest) {
 export const config = {
   matcher: [
     /*
-     * Match all request paths EXCEPT:
-     * - _next/static (static files)
-     * - _next/image (image optimization)
-     * - favicon.ico (favicon)
-     * - /auth/callback (CRITICAL: must be excluded so the middleware
-     *   doesn't interfere with the PKCE code exchange by consuming
-     *   or modifying the code verifier cookie before the route handler
-     *   can read it)
-     * - /api routes (handled by their own auth logic)
+     * Only match /dashboard routes and the root path.
+     * Explicitly do NOT match:
+     * - /login (handles its own auth code exchange via client-side PKCE)
+     * - /auth/callback (server-side PKCE exchange)
+     * - /api (handled by their own auth logic)
+     * - _next/static, _next/image, favicon.ico
      */
-    '/((?!_next/static|_next/image|favicon.ico|auth/callback|api).*)',
+    '/dashboard/:path*',
+    '/',
   ],
 };
