@@ -21,41 +21,37 @@ export async function GET(request: Request) {
       return NextResponse.redirect(`${origin}/login?error=Missing_Cookie`);
     }
 
-    // Bypass @supabase/ssr read bugs by injecting it manually into vanilla client
-    const { createClient } = await import('@supabase/supabase-js');
-    const rawSupabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        auth: {
-          flowType: 'pkce',
-          detectSessionInUrl: false,
-          persistSession: true,
-          storage: {
-            getItem: (key) => key.endsWith('-code-verifier') ? codeVerifier : null,
-            setItem: () => {},
-            removeItem: () => {},
-          }
-        }
-      }
-    );
+    // Completely bypass any SDK storage bugs by manually calling the GoTrue API
+    const tokenResponse = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/auth/v1/token?grant_type=pkce`, {
+      method: 'POST',
+      headers: {
+        'apikey': process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        auth_code: code,
+        code_verifier: codeVerifier,
+      }),
+    });
 
-    const { data, error } = await rawSupabase.auth.exchangeCodeForSession(code);
-    
-    if (error) {
-      console.error('Auth Callback Error:', error);
-      return NextResponse.redirect(`${origin}/login?error=${encodeURIComponent(error.message)}`);
+    const tokenData = await tokenResponse.json();
+
+    if (tokenData.error) {
+      console.error('Auth API Error:', tokenData);
+      return NextResponse.redirect(`${origin}/login?error=${encodeURIComponent(tokenData.error_description || tokenData.error)}`);
     }
 
-    if (data?.session) {
+    if (tokenData.access_token) {
       // Use SSR client solely to save the successfully exchanged session cookies
       const ssrSupabase = createServerSupabaseClient();
       await ssrSupabase.auth.setSession({
-        access_token: data.session.access_token,
-        refresh_token: data.session.refresh_token
+        access_token: tokenData.access_token,
+        refresh_token: tokenData.refresh_token
       });
       return NextResponse.redirect(`${origin}${next}`);
     }
+
+
   }
 
   // If there's an error, redirect to login page with error param
