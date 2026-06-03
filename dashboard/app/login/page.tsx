@@ -1,7 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState } from 'react';
 import { createClient } from '@/lib/supabase';
 import { Chrome, Mail, Loader2, Sparkles, CheckCircle2 } from 'lucide-react';
 
@@ -10,26 +9,15 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
   const supabase = createClient();
-  const router = useRouter();
-
-  useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && session) {
-        router.push('/dashboard');
-      }
-    });
-    return () => subscription.unsubscribe();
-  }, [supabase, router]);
 
   const handleGoogleLogin = async () => {
     setLoading(true);
     setMessage(null);
     try {
-      const origin = typeof window !== 'undefined' ? window.location.origin : '';
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${origin}/login`,
+          redirectTo: `${window.location.origin}/auth/callback`,
         },
       });
 
@@ -48,11 +36,10 @@ export default function LoginPage() {
     setMessage(null);
 
     try {
-      const origin = typeof window !== 'undefined' ? window.location.origin : '';
       const { error } = await supabase.auth.signInWithOtp({
         email,
         options: {
-          emailRedirectTo: `${origin}/auth/callback`,
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
         },
       });
 

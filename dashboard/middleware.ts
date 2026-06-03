@@ -17,18 +17,21 @@ export async function middleware(request: NextRequest) {
           return request.cookies.getAll();
         },
         setAll(cookiesToSet: any[]) {
-          cookiesToSet.forEach(({ name, value, options }) => request.cookies.set(name, value));
+          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
           response = NextResponse.next({
             request,
           });
           cookiesToSet.forEach(({ name, value, options }) =>
             response.cookies.set(name, value, options)
           );
-        }
+        },
       },
     }
   );
 
+  // IMPORTANT: Do NOT use getSession() here — getUser() sends a request to the
+  // Supabase Auth server every time to revalidate the Auth token, while getSession()
+  // doesn't and is therefore insecure.
   const { data: { user } } = await supabase.auth.getUser();
 
   const url = request.nextUrl.clone();
@@ -49,9 +52,32 @@ export async function middleware(request: NextRequest) {
     }
   }
 
+  // Redirect root to dashboard if logged in, otherwise to login
+  if (url.pathname === '/') {
+    if (user) {
+      url.pathname = '/dashboard';
+    } else {
+      url.pathname = '/login';
+    }
+    return NextResponse.redirect(url);
+  }
+
   return response;
 }
 
 export const config = {
-  matcher: ['/dashboard/:path*', '/login'],
+  matcher: [
+    /*
+     * Match all request paths EXCEPT:
+     * - _next/static (static files)
+     * - _next/image (image optimization)
+     * - favicon.ico (favicon)
+     * - /auth/callback (CRITICAL: must be excluded so the middleware
+     *   doesn't interfere with the PKCE code exchange by consuming
+     *   or modifying the code verifier cookie before the route handler
+     *   can read it)
+     * - /api routes (handled by their own auth logic)
+     */
+    '/((?!_next/static|_next/image|favicon.ico|auth/callback|api).*)',
+  ],
 };

@@ -28,14 +28,17 @@ export async function GET(request: Request) {
         },
       }
     );
+
     const { error } = await supabase.auth.exchangeCodeForSession(code);
-    
+
     if (!error) {
       return NextResponse.redirect(`${origin}${next}`);
-    } else {
-      console.error('Auth Callback Error:', error);
-      return NextResponse.redirect(`${origin}/login?error=${encodeURIComponent(error.message)}`);
     }
+
+    console.error('Auth callback error:', error.message);
+    return NextResponse.redirect(
+      `${origin}/login?error=${encodeURIComponent(error.message)}`
+    );
   }
 
   return NextResponse.redirect(`${origin}/login?error=no_code_provided`);
