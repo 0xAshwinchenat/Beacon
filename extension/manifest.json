@@ -1,0 +1,29 @@
+{
+  "manifest_version": 3,
+  "name": "Beacon - Job Tracker",
+  "version": "1.0.0",
+  "description": "Track job applications from LinkedIn, Indeed, Naukri, and more directly to your Supabase dashboard.",
+  "permissions": [
+    "activeTab",
+    "storage",
+    "scripting",
+    "notifications"
+  ],
+  "host_permissions": [
+    "https://*/*",
+    "http://*/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "run_at": "document_end"
+    }
+  ],
+  "action": {
+    "default_popup": "popup.html"
+  }
+}
