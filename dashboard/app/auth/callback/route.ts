@@ -52,6 +52,8 @@ export async function GET(request: Request) {
     }
 
 
+    // If it reached here, tokenData is weird! Let's log it!
+    return NextResponse.redirect(`${origin}/login?error=no_code&tokenData=${encodeURIComponent(JSON.stringify(tokenData))}&full_url=${encodeURIComponent(request.url)}`);
   }
 
   // If there's an error, redirect to login page with error param
