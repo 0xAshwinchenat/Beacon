@@ -12,14 +12,11 @@ export async function middleware(request: NextRequest) {
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
-      cookieOptions: {
-        name: 'sb-auth',
-      },
       cookies: {
         getAll() {
-          return request.cookies.getAll().map(cookie => ({ name: cookie.name, value: cookie.value }));
+          return request.cookies.getAll();
         },
-        setAll(cookiesToSet: any[]) {
+        setAll(cookiesToSet) {
           cookiesToSet.forEach(({ name, value, options }) => request.cookies.set(name, value));
           response = NextResponse.next({
             request,
