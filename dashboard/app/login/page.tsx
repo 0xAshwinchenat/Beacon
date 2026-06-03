@@ -1,14 +1,50 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase';
 import { Chrome, Mail, Loader2, Sparkles, CheckCircle2 } from 'lucide-react';
+import { Suspense } from 'react';
 
-export default function LoginPage() {
+function LoginContent() {
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
+  const [exchanging, setExchanging] = useState(false);
   const supabase = createClient();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  // Handle OAuth code if Supabase redirected here with ?code=
+  useEffect(() => {
+    const code = searchParams.get('code');
+    if (code && !exchanging) {
+      setExchanging(true);
+      // Exchange the code for a session directly on the client
+      supabase.auth.exchangeCodeForSession(code).then(({ data, error }) => {
+        if (error) {
+          console.error('Code exchange error:', error.message);
+          setMessage({ text: error.message, type: 'error' });
+          setExchanging(false);
+          // Clean the URL
+          window.history.replaceState({}, '', '/login');
+        } else if (data.session) {
+          // Success! Redirect to dashboard
+          router.push('/dashboard');
+        }
+      });
+    }
+  }, [searchParams, supabase.auth, router, exchanging]);
+
+  // Also listen for auth state changes (handles hash fragments from implicit flow)
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_IN' && session) {
+        router.push('/dashboard');
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, [supabase.auth, router]);
 
   const handleGoogleLogin = async () => {
     setLoading(true);
@@ -55,6 +91,16 @@ export default function LoginPage() {
       setLoading(false);
     }
   };
+
+  // Show loading screen while exchanging code
+  if (exchanging) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center">
+        <Loader2 className="w-10 h-10 text-indigo-500 animate-spin mb-4" />
+        <p className="text-text-secondary text-sm">Signing you in...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background flex flex-col justify-center items-center px-4 relative overflow-hidden">
@@ -185,5 +231,18 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center">
+        <Loader2 className="w-10 h-10 text-indigo-500 animate-spin mb-4" />
+        <p className="text-text-secondary text-sm">Loading...</p>
+      </div>
+    }>
+      <LoginContent />
+    </Suspense>
   );
 }
