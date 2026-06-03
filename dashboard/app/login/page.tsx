@@ -39,27 +39,43 @@ function LoginContent() {
       
       const authClient = getAuthClient();
       
-      authClient.auth.exchangeCodeForSession(code).then(async ({ data, error }) => {
-        if (error) {
-          console.error('Code exchange error:', error.message);
-          setMessage({ text: error.message, type: 'error' });
+      authClient.auth.exchangeCodeForSession(code)
+        .then(async ({ data, error }) => {
+          if (error) {
+            console.error('Code exchange error:', error.message);
+            setMessage({ text: error.message, type: 'error' });
+            setExchanging(false);
+            window.history.replaceState({}, '', '/login');
+            return;
+          }
+          
+          if (data.session) {
+            // Set session cookies so middleware/server can read them
+            // Use the SSR browser client to persist to cookies
+            try {
+              const ssrClient = createSSRClient();
+              await ssrClient.auth.setSession({
+                access_token: data.session.access_token,
+                refresh_token: data.session.refresh_token,
+              });
+            } catch (e) {
+              console.warn('SSR setSession warning:', e);
+              // Continue anyway — the important thing is we have a session
+            }
+            
+            // Hard redirect — forces full page load so middleware reads fresh cookies
+            window.location.href = '/dashboard';
+          } else {
+            setMessage({ text: 'No session returned from exchange', type: 'error' });
+            setExchanging(false);
+          }
+        })
+        .catch((err) => {
+          console.error('Exchange promise rejected:', err);
+          setMessage({ text: String(err?.message || err), type: 'error' });
           setExchanging(false);
           window.history.replaceState({}, '', '/login');
-          return;
-        }
-        
-        if (data.session) {
-          // Transfer the session to the SSR cookie-based client
-          // so the middleware and server components can read it
-          const ssrClient = createSSRClient();
-          await ssrClient.auth.setSession({
-            access_token: data.session.access_token,
-            refresh_token: data.session.refresh_token,
-          });
-          
-          router.push('/dashboard');
-        }
-      });
+        });
     }
   }, [searchParams, router, exchanging]);
 
